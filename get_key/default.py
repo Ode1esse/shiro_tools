@@ -1,15 +1,16 @@
-# coding: utf-8
-
-import os
+import sys
 import argparse
 import base64
-import uuid
 import json
-from Crypto.Cipher import AES
+
+sys.path.append("..")
+from Utils import GCMCipher, CBCCipher
 
 class GetKey(object):
+
     def __init__(self):
         self.checkdata = "rO0ABXNyADJvcmcuYXBhY2hlLnNoaXJvLnN1YmplY3QuU2ltcGxlUHJpbmNpcGFsQ29sbGVjdGlvbqh/WCXGowhKAwABTAAPcmVhbG1QcmluY2lwYWxzdAAPTGphdmEvdXRpbC9NYXA7eHBwdwEAeA=="
+
 
 
     def getKey(self, ciphertype):
@@ -17,7 +18,7 @@ class GetKey(object):
         payloads = []
         key_payload = {}
 
-        with open('./keys.txt', "r", encoding='utf8') as f:
+        with open('keys.txt', "r", encoding='utf8') as f:
             for line in f:
                 keys.append(line.strip())
 
@@ -25,9 +26,9 @@ class GetKey(object):
             for key in keys:
                 # print("[-] start key: {0}".format(key))
                 if ciphertype == 'CBC':
-                    payload = self.CBCCipher(key, base64.b64decode(self.checkdata))
+                    payload = CBCCipher(key, base64.b64decode(self.checkdata))
                 if ciphertype == 'GCM':
-                    payload = self.GCMCipher(key, base64.b64decode(self.checkdata))
+                    payload = GCMCipher(key, base64.b64decode(self.checkdata))
 
                 payload = payload.decode()
                 payloads.append(payload)
@@ -42,27 +43,6 @@ class GetKey(object):
             print(e)
             pass
         return False
-
-
-    # 1.4.2及以上版本使用GCM加密
-    def GCMCipher(self, key, file_body):
-        iv = os.urandom(16)
-        cipher = AES.new(base64.b64decode(key), AES.MODE_GCM, iv)
-        ciphertext, tag = cipher.encrypt_and_digest(file_body)
-        ciphertext = ciphertext + tag
-        base64_ciphertext = base64.b64encode(iv + ciphertext)
-        return base64_ciphertext
-
-
-    def CBCCipher(self, key, file_body):
-        BS = AES.block_size
-        pad = lambda s: s + ((BS - len(s) % BS) * chr(BS - len(s) % BS)).encode()
-        mode = AES.MODE_CBC
-        iv = uuid.uuid4().bytes
-        file_body = pad(file_body)
-        encryptor = AES.new(base64.b64decode(key), mode, iv)
-        base64_ciphertext = base64.b64encode(iv + encryptor.encrypt(file_body))
-        return base64_ciphertext
 
 
 if __name__ == '__main__':
